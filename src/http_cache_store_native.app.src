@@ -1,17 +1,11 @@
-{application, http_cache_store_native,
+{application,
+ http_cache_store_native,
  [{description, "An OTP application"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {http_cache_store_native_app, []}},
-  {applications,
-   [kernel,
-    stdlib,
-    os_mon,
-    telemetry
-   ]},
-  {env,[]},
+  {applications, [kernel, stdlib, os_mon, telemetry]},
+  {env, []},
   {modules, []},
-
   {licenses, ["Apache 2.0"]},
-  {links, []}
- ]}.
+  {links, []}]}.
