@@ -38,11 +38,8 @@ do_sweep({_, ObjectKey, SeqNumber} = LRUKey) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
         [{_, _, _, _, _, _, _, SeqNumber}] ->
             ok;
-        [_Object] ->
-            % There's no longer a matching object. This means the current LRU entry is outdated
-            ets:delete(?LRU_TABLE, LRUKey);
-        [] ->
-            ok
+        _ ->
+            ets:delete(?LRU_TABLE, LRUKey)
     end,
     do_sweep(ets:next(?LRU_TABLE, LRUKey)).
 
