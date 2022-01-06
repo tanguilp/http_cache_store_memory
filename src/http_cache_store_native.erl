@@ -95,7 +95,7 @@ do_put(RequestKey,
     ok.
 
 delete_object(ObjectKey, Reason) ->
-    logger:debug([{what, object_deleted}, {which, ObjectKey}, {reason, Reason}]),
+    telemetry:execute([http_cache_store_native, object_deleted], #{}, #{reason => Reason}),
     ets:delete(?OBJECT_TABLE, ObjectKey),
     ok.
 
