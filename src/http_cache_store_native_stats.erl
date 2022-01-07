@@ -19,9 +19,7 @@ is_limit_reached() ->
     IsReached.
 
 allocated_memory_used() ->
-    MemoryLimit =
-        application:get_env(
-            http_cache_store_native, memory_limit, ?DEFAULT_LIMIT),
+    MemoryLimit = application:get_env(http_cache_store_native, memory_limit, ?DEFAULT_LIMIT),
     allocated_memory_used(MemoryLimit).
 
 allocated_memory_used(Ratio) when is_float(Ratio) ->
@@ -82,5 +80,6 @@ schedule_collect() ->
     erlang:send_after(collect_interval(), self(), collect_stats).
 
 collect_interval() ->
-    application:get_env(
-        http_cache_store_native, pull_table_stats_interval, ?DEFAULT_INTERVAL).
+    application:get_env(http_cache_store_native,
+                        pull_table_stats_interval,
+                        ?DEFAULT_INTERVAL).

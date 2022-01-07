@@ -13,8 +13,9 @@ start_link() ->
 
 init(_) ->
     Interval =
-        application:get_env(
-            http_cache_store_native, expired_resp_sweep_interval, ?DEFAULT_INTERVAL),
+        application:get_env(http_cache_store_native,
+                            expired_resp_sweep_interval,
+                            ?DEFAULT_INTERVAL),
     schedule_sweep(Interval),
     {ok, Interval}.
 
