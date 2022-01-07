@@ -6,7 +6,7 @@
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
--define(DEFAULT_INTERVAL, 5 * 1000).
+-define(DEFAULT_INTERVAL, 2 * 1000).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -26,7 +26,12 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 handle_info(sweep, Interval) ->
-    sweep(),
+    telemetry:span([http_cache_store_native, expired_lru_entry_sweeper],
+                   #{},
+                   fun() ->
+                      sweep(),
+                      {ok, #{}}
+                   end),
     schedule_sweep(Interval),
     {noreply, Interval}.
 
