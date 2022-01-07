@@ -34,7 +34,7 @@ init(_) ->
 handle_continue(_, State) ->
     NbObjects =
         application:get_env(
-            application:get_application(), warmup_nb_objects, ?WARMUP_NB_OBJECTS),
+            http_cache_store_native, warmup_nb_objects, ?WARMUP_NB_OBJECTS),
     gen_server:abcast(nodes(), ?MODULE, {warm_me_up, {node(), NbObjects}}),
     {noreply, State}.
 
