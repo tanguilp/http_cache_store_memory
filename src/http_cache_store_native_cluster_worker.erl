@@ -43,9 +43,8 @@ warmup_node(Node, {_, ObjectKey, SeqNumber} = LRUKey, NbObjects) ->
           Response,
           RespMetadata,
           _,
-          AltKeys,
           SeqNumber}] ->
-            CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, AltKeys},
+            CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata},
             http_cache_store_native_cluster_mon:send_cached_object(Node, CachedObject),
             warmup_node(Node, ets:prev(?LRU_TABLE, LRUKey), NbObjects - 1);
         _ ->
@@ -54,8 +53,8 @@ warmup_node(Node, {_, ObjectKey, SeqNumber} = LRUKey, NbObjects) ->
 
 send_requested_object(Node, ObjectKey) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{{RequestKey, _}, VaryHeaders, UrlDigest, Response, RespMetadata, _, AltKeys, _}] ->
-            CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, AltKeys},
+        [{{RequestKey, _}, VaryHeaders, UrlDigest, Response, RespMetadata, _, _}] ->
+            CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata},
             http_cache_store_native_cluster_mon:send_cached_object(Node, CachedObject);
         _ ->
             ok
@@ -65,7 +64,7 @@ maybe_request_cached_object(Node, ObjectKey, RemoteExpires) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
         [] ->
             http_cache_store_native_cluster_mon:request_cached_object(Node, ObjectKey);
-        [{_, _, _, _, _, Expires, _, _}] when Expires < RemoteExpires ->
+        [{_, _, _, _, _, Expires, _}] when Expires < RemoteExpires ->
             http_cache_store_native_cluster_mon:request_cached_object(Node, ObjectKey);
         _ ->
             ok

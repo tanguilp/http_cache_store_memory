@@ -4,14 +4,14 @@
 
 -behaviour(http_cache_store).
 
--export([list_candidates/1, get_response/1, put/6, put_no_broadcast/6, notify_resp_used/2,
+-export([list_candidates/1, get_response/1, put/5, put_no_broadcast/5, notify_response_used/2,
          invalidate_url/1, invalidate_url_no_broadcast/1, invalidate_by_alternate_key/1,
          invalidate_by_alternate_key_no_broadcast/1]).
 -export([delete_object/2]).
 
 list_candidates(RequestKey) ->
     Spec =
-        [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '$6', '_', '_'},
+        [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '$6', '_'},
           [],
           [['$1', '$2', '$3', '$4', '$5', '$6']]}],
     Now = unix_now(),
@@ -28,30 +28,28 @@ get_response(ObjectKey) ->
           {Status, RespHeaders, RespBody},
           RespMetadata,
           _Expires,
-          _AlternateKeys,
           _SeqNumber}] ->
             {Status, RespHeaders, RespBody, RespMetadata};
         [] ->
             undefined
     end.
 
-put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, AlternateKeys) ->
-    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, AlternateKeys, true).
+put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata) ->
+    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, true).
 
 put_no_broadcast(RequestKey,
                  UrlDigest,
                  VaryHeaders,
                  Response,
-                 RespMetadata,
-                 AlternateKeys) ->
-    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, AlternateKeys, false).
+                 RespMetadata
+                 ) ->
+    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, false).
 
 put(RequestKey,
     UrlDigest,
     VaryHeaders,
     Response,
     RespMetadata,
-    AlternateKeys,
     DoBroadcast) ->
     case http_cache_store_native_stats:is_limit_reached() of
         true ->
@@ -62,7 +60,6 @@ put(RequestKey,
                    VaryHeaders,
                    Response,
                    RespMetadata,
-                   AlternateKeys,
                    DoBroadcast)
     end.
 
@@ -71,7 +68,6 @@ do_put(RequestKey,
        VaryHeaders,
        Response,
        RespMetadata,
-       AlternateKeys,
        DoBroadcast) ->
     ObjectKey = object_key(RequestKey, VaryHeaders),
     SeqNumber = new_seq_number(),
@@ -83,7 +79,6 @@ do_put(RequestKey,
                 Response,
                 RespMetadata,
                 Expires,
-                AlternateKeys,
                 SeqNumber}),
     lru(ObjectKey, unix_now(), SeqNumber),
     case DoBroadcast of
@@ -110,16 +105,16 @@ do_invalidate_url(_UrlDigest, '$end_of_table', NbDeleted) ->
     {ok, NbDeleted};
 do_invalidate_url(UrlDigest, ObjectKey, NbDeleted) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, UrlDigest, _, _, _, _, _}] ->
+        [{_, _, UrlDigest, _, _, _, _}] ->
             delete_object(ObjectKey, url_invalidation),
             do_invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey), NbDeleted + 1);
         _ ->
             do_invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey), NbDeleted)
     end.
 
-notify_resp_used(ObjectKey, When) ->
+notify_response_used(ObjectKey, When) ->
     SeqNumber = new_seq_number(),
-    case ets:update_element(?OBJECT_TABLE, ObjectKey, {8, SeqNumber}) of
+    case ets:update_element(?OBJECT_TABLE, ObjectKey, {7, SeqNumber}) of
         true ->
             lru(ObjectKey, When, SeqNumber),
             ok;
@@ -138,7 +133,7 @@ do_invalidate_by_alternate_key(_AltKeys, '$end_of_table', NbDeleted) ->
     {ok, NbDeleted};
 do_invalidate_by_alternate_key(AltKeys, ObjectKey, NbDeleted) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, _, _, _, _, ObjectAltKeys, _}] ->
+        [{_, _, _, _, #{alternate_keys := ObjectAltKeys}, _, _}] ->
             case lists:any(fun(AltKey) -> lists:member(AltKey, ObjectAltKeys) end, AltKeys) of
                 true ->
                     delete_object(ObjectKey, alternate_key_invalidation),
@@ -161,7 +156,7 @@ new_seq_number() ->
     erlang:unique_integer().
 
 object_key(RequestKey, VaryHeaders) ->
-    {RequestKey, crypto:hash(sha, erlang:term_to_binary(VaryHeaders))}.
+    {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
 
 unix_now() ->
     os:system_time(second).

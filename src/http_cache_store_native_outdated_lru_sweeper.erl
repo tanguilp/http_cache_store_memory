@@ -42,7 +42,7 @@ do_sweep('$end_of_table') ->
     ok;
 do_sweep({_, ObjectKey, SeqNumber} = LRUKey) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, _, _, _, _, _, SeqNumber}] ->
+        [{_, _, _, _, _, _, SeqNumber}] ->
             ok;
         _ ->
             ets:delete(?LRU_TABLE, LRUKey)
