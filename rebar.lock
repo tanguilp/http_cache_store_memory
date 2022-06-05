@@ -5,7 +5,7 @@
   1},
  {<<"http_cache">>,
   {git,"https://github.com/tanguilp/http_cache.git",
-       {ref,"4d83b81b9828cb42bd6e3d78d23061b864be95bf"}},
+       {ref,"de7e1a791f609d4dc3ebbb96ec0461a48a35e712"}},
   0},
  {<<"telemetry">>,{pkg,<<"telemetry">>,<<"1.1.0">>},0}]}.
 [

@@ -4,10 +4,7 @@
 
 -behaviour(http_cache_store).
 
--export([list_candidates/1, get_response/1, put/5, put_no_broadcast/5, notify_response_used/2,
-         invalidate_url/1, invalidate_url_no_broadcast/1, invalidate_by_alternate_key/1,
-         invalidate_by_alternate_key_no_broadcast/1]).
--export([delete_object/2]).
+-export([list_candidates/1, get_response/1, put/5, notify_response_used/2, invalidate_url/1, invalidate_by_alternate_key/1, delete_object/2, object_key/2, lru/2]).
 
 list_candidates(RequestKey) ->
     Spec =
@@ -34,129 +31,63 @@ get_response(ObjectKey) ->
             undefined
     end.
 
-put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata) ->
-    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, true).
-
-put_no_broadcast(RequestKey,
-                 UrlDigest,
-                 VaryHeaders,
-                 Response,
-                 RespMetadata
-                 ) ->
-    put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, false).
-
 put(RequestKey,
     UrlDigest,
     VaryHeaders,
     Response,
-    RespMetadata,
-    DoBroadcast) ->
-    case http_cache_store_native_stats:is_limit_reached() of
-        true ->
-            {error, store_overloaded};
-        false ->
-            do_put(RequestKey,
-                   UrlDigest,
-                   VaryHeaders,
-                   Response,
-                   RespMetadata,
-                   DoBroadcast)
+    RespMetadata
+    ) ->
+  case http_cache_store_native_worker_sup:start_worker({cache_object, {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata}}) of
+    ok ->
+      ObjectKey = object_key(RequestKey, VaryHeaders),
+      Expires = map_get(grace, RespMetadata),
+      http_cache_store_native_cluster_mon:broadcast_object_available(ObjectKey, Expires),
+      ok;
+
+    {error, _} = Error ->
+      Error
+  end.
+
+invalidate_url(UrlDigest) ->
+    http_cache_store_native_cluster_mon:broadcast_invalidate_url(UrlDigest),
+    case http_cache_store_native_worker_sup:start_worker({invalidate_url, UrlDigest}) of
+      ok ->
+        {ok, undefined};
+
+      {error, _} = Error ->
+        Error
     end.
 
-do_put(RequestKey,
-       UrlDigest,
-       VaryHeaders,
-       Response,
-       RespMetadata,
-       DoBroadcast) ->
-    ObjectKey = object_key(RequestKey, VaryHeaders),
-    SeqNumber = new_seq_number(),
-    Expires = map_get(grace, RespMetadata),
-    ets:insert(?OBJECT_TABLE,
-               {ObjectKey,
-                VaryHeaders,
-                UrlDigest,
-                Response,
-                RespMetadata,
-                Expires,
-                SeqNumber}),
-    lru(ObjectKey, unix_now(), SeqNumber),
-    case DoBroadcast of
+invalidate_by_alternate_key(AltKeys) ->
+    http_cache_store_native_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
+    case http_cache_store_native_worker_sup:start_worker({invalidate_by_alternate_key, AltKeys}) of
+      ok ->
+        {ok, undefined};
+
+      {error, _} = Error ->
+        Error
+    end.
+
+notify_response_used(ObjectKey, _When) ->
+    SeqNumber = erlang:unique_integer(),
+    case ets:update_element(?OBJECT_TABLE, ObjectKey, {7, SeqNumber}) of
         true ->
-            http_cache_store_native_cluster_mon:broadcast_cached_object(ObjectKey, Expires);
+            lru(ObjectKey, SeqNumber),
+            ok;
         false ->
             ok
-    end,
-    ok.
+    end.
 
 delete_object(ObjectKey, Reason) ->
     telemetry:execute([http_cache_store_native, object_deleted], #{}, #{reason => Reason}),
     ets:delete(?OBJECT_TABLE, ObjectKey),
     ok.
 
-invalidate_url(UrlDigest) ->
-    http_cache_store_native_cluster_mon:broadcast_invalidate_url(UrlDigest),
-    do_invalidate_url(UrlDigest, ets:first(?OBJECT_TABLE), 0).
-
-invalidate_url_no_broadcast(UrlDigest) ->
-    do_invalidate_url(UrlDigest, ets:first(?OBJECT_TABLE), 0).
-
-do_invalidate_url(_UrlDigest, '$end_of_table', NbDeleted) ->
-    {ok, NbDeleted};
-do_invalidate_url(UrlDigest, ObjectKey, NbDeleted) ->
-    case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, UrlDigest, _, _, _, _}] ->
-            delete_object(ObjectKey, url_invalidation),
-            do_invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey), NbDeleted + 1);
-        _ ->
-            do_invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey), NbDeleted)
-    end.
-
-notify_response_used(ObjectKey, When) ->
-    SeqNumber = new_seq_number(),
-    case ets:update_element(?OBJECT_TABLE, ObjectKey, {7, SeqNumber}) of
-        true ->
-            lru(ObjectKey, When, SeqNumber),
-            ok;
-        false ->
-            ok
-    end.
-
-invalidate_by_alternate_key(AltKeys) ->
-    http_cache_store_native_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
-    do_invalidate_by_alternate_key(AltKeys, ets:first(?OBJECT_TABLE), 0).
-
-invalidate_by_alternate_key_no_broadcast(AltKeys) ->
-    do_invalidate_by_alternate_key(AltKeys, ets:first(?OBJECT_TABLE), 0).
-
-do_invalidate_by_alternate_key(_AltKeys, '$end_of_table', NbDeleted) ->
-    {ok, NbDeleted};
-do_invalidate_by_alternate_key(AltKeys, ObjectKey, NbDeleted) ->
-    case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, _, _, #{alternate_keys := ObjectAltKeys}, _, _}] ->
-            case lists:any(fun(AltKey) -> lists:member(AltKey, ObjectAltKeys) end, AltKeys) of
-                true ->
-                    delete_object(ObjectKey, alternate_key_invalidation),
-                    do_invalidate_by_alternate_key(AltKeys,
-                                                   ets:next(?OBJECT_TABLE, ObjectKey),
-                                                   NbDeleted + 1);
-                false ->
-                    do_invalidate_by_alternate_key(AltKeys,
-                                                   ets:next(?OBJECT_TABLE, ObjectKey),
-                                                   NbDeleted)
-            end;
-        _ ->
-            do_invalidate_by_alternate_key(AltKeys, ets:next(?OBJECT_TABLE, ObjectKey), NbDeleted)
-    end.
-
-lru(ObjectKey, When, SeqNumber) ->
-    ets:insert(?LRU_TABLE, {{When, ObjectKey, SeqNumber}}).
-
-new_seq_number() ->
-    erlang:unique_integer().
-
 object_key(RequestKey, VaryHeaders) ->
-    {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
+  {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
+
+lru(ObjectKey, SeqNumber) ->
+    ets:insert(?LRU_TABLE, {{unix_now(), ObjectKey, SeqNumber}}).
 
 unix_now() ->
     os:system_time(second).
