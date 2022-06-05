@@ -109,7 +109,7 @@ we then can use this sequence number to determine if the cached response was use
 
 At startup, some processes are launched:
 
-![Screenshot of the supervision tree](https://github.com/tanguilp/http_cache_store_native/supervision_tree.png)
+![Screenshot of the supervision tree](https://github.com/tanguilp/http_cache_store_native/blob/master/supervision_tree.png)
 
 `http_cache_store_native_table_holder` holds the ETS tables.
 
