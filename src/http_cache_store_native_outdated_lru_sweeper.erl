@@ -13,12 +13,8 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
-    Interval =
-        application:get_env(http_cache_store_native,
-                            outdated_lru_sweep_interval,
-                            ?DEFAULT_INTERVAL),
-    schedule_sweep(Interval),
-    {ok, Interval}.
+    schedule_sweep(),
+    {ok, []}.
 
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
@@ -26,15 +22,15 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Request, State) ->
     {noreply, State}.
 
-handle_info(sweep, Interval) ->
+handle_info(sweep, State) ->
     telemetry:span([http_cache_store_native, expired_lru_entry_sweeper],
                    #{},
                    fun() ->
                       sweep(),
                       {ok, #{}}
                    end),
-    schedule_sweep(Interval),
-    {noreply, Interval}.
+    schedule_sweep(),
+    {noreply, State}.
 
 sweep() ->
     do_sweep(ets:first(?LRU_TABLE)).
@@ -50,5 +46,10 @@ do_sweep({_, ObjectKey, SeqNumber} = LRUKey) ->
     end,
     do_sweep(ets:next(?LRU_TABLE, LRUKey)).
 
-schedule_sweep(Interval) ->
-    erlang:send_after(Interval, self(), sweep).
+schedule_sweep() ->
+    erlang:send_after(sweep_interval(), self(), sweep).
+
+sweep_interval() ->
+    application:get_env(http_cache_store_native,
+                        outdated_lru_sweep_interval,
+                        ?DEFAULT_INTERVAL).
