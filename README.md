@@ -51,7 +51,7 @@ Erlang (rebar3):
 Elixir:
 
 ```elixir
-{:telemetry, "~> 0.1"}
+{:http_cache_store_native, "~> 0.1"}
 ```
 
 ## Telemetry
