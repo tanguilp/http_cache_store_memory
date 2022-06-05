@@ -6,8 +6,8 @@
 -export([start_link/1]).
 
 start_link({cache_object, Object}) ->
-  Pid = erlang:spawn_link(?MODULE, cache_object, [Object]),
-  {ok, Pid};
+    Pid = erlang:spawn_link(?MODULE, cache_object, [Object]),
+    {ok, Pid};
 start_link({invalidate_url, UrlDigest}) ->
     Pid = erlang:spawn_link(fun() -> invalidate_url(UrlDigest) end),
     {ok, Pid};
@@ -33,17 +33,11 @@ cache_object({RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata}) ->
     SeqNumber = erlang:unique_integer(),
     Expires = map_get(grace, RespMetadata),
     ets:insert(?OBJECT_TABLE,
-               {ObjectKey,
-                VaryHeaders,
-                UrlDigest,
-                Response,
-                RespMetadata,
-                Expires,
-                SeqNumber}),
+               {ObjectKey, VaryHeaders, UrlDigest, Response, RespMetadata, Expires, SeqNumber}),
     http_cache_store_native:lru(ObjectKey, SeqNumber).
 
 invalidate_url(UrlDigest) ->
-     invalidate_url(UrlDigest, ets:first(?OBJECT_TABLE)).
+    invalidate_url(UrlDigest, ets:first(?OBJECT_TABLE)).
 
 invalidate_url(_UrlDigest, '$end_of_table') ->
     ok;
@@ -57,7 +51,7 @@ invalidate_url(UrlDigest, ObjectKey) ->
     end.
 
 invalidate_by_alternate_key(AltKeys) ->
-  invalidate_by_alternate_key(AltKeys, ets:first(?OBJECT_TABLE)).
+    invalidate_by_alternate_key(AltKeys, ets:first(?OBJECT_TABLE)).
 
 invalidate_by_alternate_key(_AltKeys, '$end_of_table') ->
     ok;
@@ -71,7 +65,6 @@ invalidate_by_alternate_key(AltKeys, ObjectKey) ->
                 false ->
                     invalidate_by_alternate_key(AltKeys, ets:next(?OBJECT_TABLE, ObjectKey))
             end;
-
         _ ->
             invalidate_by_alternate_key(AltKeys, ets:next(?OBJECT_TABLE, ObjectKey))
     end.
@@ -85,13 +78,7 @@ warmup_node(_Node, _Key, 0) ->
     ok;
 warmup_node(Node, {_, ObjectKey, SeqNumber} = LRUKey, NbObjects) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{{RequestKey, _},
-          VaryHeaders,
-          UrlDigest,
-          Response,
-          RespMetadata,
-          _,
-          SeqNumber}] ->
+        [{{RequestKey, _}, VaryHeaders, UrlDigest, Response, RespMetadata, _, SeqNumber}] ->
             CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata},
             http_cache_store_native_cluster_mon:send_cached_object(Node, CachedObject),
             warmup_node(Node, ets:prev(?LRU_TABLE, LRUKey), NbObjects - 1);

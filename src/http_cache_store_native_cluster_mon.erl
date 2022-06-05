@@ -17,7 +17,9 @@ broadcast_invalidate_by_alternate_key(AltKeys) ->
     gen_server:abcast(nodes(), ?MODULE, {invalidate_by_alternate_key, AltKeys}).
 
 broadcast_object_available(ObjectKey, Expires) ->
-    gen_server:abcast(nodes(), ?MODULE, {remote_object_available, {node(), {ObjectKey, Expires}}}).
+    gen_server:abcast(nodes(),
+                      ?MODULE,
+                      {remote_object_available, {node(), {ObjectKey, Expires}}}).
 
 request_cached_object(Node, ObjectKey) ->
     gen_server:cast({?MODULE, Node}, {remote_object_request, {node(), ObjectKey}}).
@@ -41,9 +43,8 @@ handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 handle_cast({_, _} = Cmd, State) ->
-  http_cache_store_native_worker_sup:start_worker(Cmd),
-  {noreply, State}.
+    http_cache_store_native_worker_sup:start_worker(Cmd),
+    {noreply, State}.
 
 handle_info(_Request, State) ->
     {noreply, State}.
-

@@ -5,7 +5,8 @@
 
 -behaviour(http_cache_store).
 
--export([list_candidates/1, get_response/1, put/5, notify_response_used/2, invalidate_url/1, invalidate_by_alternate_key/1, delete_object/2, object_key/2, lru/2]).
+-export([list_candidates/1, get_response/1, put/5, notify_response_used/2,
+         invalidate_url/1, invalidate_by_alternate_key/1, delete_object/2, object_key/2, lru/2]).
 
 list_candidates(RequestKey) ->
     Spec =
@@ -32,41 +33,41 @@ get_response(ObjectKey) ->
             undefined
     end.
 
-put(RequestKey,
-    UrlDigest,
-    VaryHeaders,
-    Response,
-    RespMetadata
-    ) ->
-  case http_cache_store_native_worker_sup:start_worker({cache_object, {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata}}) of
-    ok ->
-      ObjectKey = object_key(RequestKey, VaryHeaders),
-      Expires = map_get(grace, RespMetadata),
-      http_cache_store_native_cluster_mon:broadcast_object_available(ObjectKey, Expires),
-      ok;
-
-    {error, _} = Error ->
-      Error
-  end.
+put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata) ->
+    case http_cache_store_native_worker_sup:start_worker({cache_object,
+                                                          {RequestKey,
+                                                           UrlDigest,
+                                                           VaryHeaders,
+                                                           Response,
+                                                           RespMetadata}})
+    of
+        ok ->
+            ObjectKey = object_key(RequestKey, VaryHeaders),
+            Expires = map_get(grace, RespMetadata),
+            http_cache_store_native_cluster_mon:broadcast_object_available(ObjectKey, Expires),
+            ok;
+        {error, _} = Error ->
+            Error
+    end.
 
 invalidate_url(UrlDigest) ->
     http_cache_store_native_cluster_mon:broadcast_invalidate_url(UrlDigest),
     case http_cache_store_native_worker_sup:start_worker({invalidate_url, UrlDigest}) of
-      ok ->
-        {ok, undefined};
-
-      {error, _} = Error ->
-        Error
+        ok ->
+            {ok, undefined};
+        {error, _} = Error ->
+            Error
     end.
 
 invalidate_by_alternate_key(AltKeys) ->
     http_cache_store_native_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
-    case http_cache_store_native_worker_sup:start_worker({invalidate_by_alternate_key, AltKeys}) of
-      ok ->
-        {ok, undefined};
-
-      {error, _} = Error ->
-        Error
+    case http_cache_store_native_worker_sup:start_worker({invalidate_by_alternate_key,
+                                                          AltKeys})
+    of
+        ok ->
+            {ok, undefined};
+        {error, _} = Error ->
+            Error
     end.
 
 notify_response_used(ObjectKey, _When) ->
@@ -85,7 +86,7 @@ delete_object(ObjectKey, Reason) ->
     ok.
 
 object_key(RequestKey, VaryHeaders) ->
-  {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
+    {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
 
 lru(ObjectKey, SeqNumber) ->
     ets:insert(?LRU_TABLE, {{unix_now(), ObjectKey, SeqNumber}}).

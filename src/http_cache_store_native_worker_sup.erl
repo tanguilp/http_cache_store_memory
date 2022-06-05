@@ -11,37 +11,34 @@
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-start_worker({Type, _} = Cmd) when
-    Type == cache_object;
-    Type == remote_object_available;
-    Type == remote_object_request;
-    Type == remote_object_response ->
-  case http_cache_store_native_stats:is_limit_reached() of
-    false ->
-      do_start_worker(Cmd);
-
-    true ->
-      {error, storage_limit_reached}
-  end;
+start_worker({Type, _} = Cmd)
+    when Type == cache_object;
+         Type == remote_object_available;
+         Type == remote_object_request;
+         Type == remote_object_response ->
+    case http_cache_store_native_stats:is_limit_reached() of
+        false ->
+            do_start_worker(Cmd);
+        true ->
+            {error, storage_limit_reached}
+    end;
 start_worker(Cmd) ->
-  do_start_worker(Cmd).
+    do_start_worker(Cmd).
 
 do_start_worker(Cmd) ->
-  case is_priority_command(Cmd) of
-    true ->
-      supervisor:start_child(?MODULE, [Cmd]),
-      ok;
-
-    false ->
-        case count_children() < ?MAX_CHILDREN of
-          true ->
-             supervisor:start_child(?MODULE, [Cmd]),
-             ok;
-
-         false ->
-            {error, concurrency_limit_reached}
-      end
-  end.
+    case is_priority_command(Cmd) of
+        true ->
+            supervisor:start_child(?MODULE, [Cmd]),
+            ok;
+        false ->
+            case count_children() < ?MAX_CHILDREN of
+                true ->
+                    supervisor:start_child(?MODULE, [Cmd]),
+                    ok;
+                false ->
+                    {error, concurrency_limit_reached}
+            end
+    end.
 
 count_children() ->
     proplists:get_value(active, supervisor:count_children(?MODULE)).

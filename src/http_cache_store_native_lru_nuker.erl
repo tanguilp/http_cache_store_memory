@@ -81,6 +81,4 @@ schedule_check() ->
     erlang:send_after(limit_check_interval(), self(), check).
 
 limit_check_interval() ->
-        application:get_env(http_cache_store_native,
-                            limit_check_interval,
-                            ?LIMIT_CHECK_INTERVAL).
+    application:get_env(http_cache_store_native, limit_check_interval, ?LIMIT_CHECK_INTERVAL).

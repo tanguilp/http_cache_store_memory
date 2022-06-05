@@ -51,9 +51,9 @@ schedule_sweep() ->
     erlang:send_after(sweep_interval(), self(), sweep).
 
 sweep_interval() ->
-  application:get_env(http_cache_store_native,
-                      expired_resp_sweep_interval,
-                      ?DEFAULT_INTERVAL).
+    application:get_env(http_cache_store_native,
+                        expired_resp_sweep_interval,
+                        ?DEFAULT_INTERVAL).
 
 unix_now() ->
     os:system_time(second).
