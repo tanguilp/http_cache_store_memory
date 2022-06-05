@@ -1,3 +1,4 @@
+%% @private
 -module(http_cache_store_native_expired_resp_sweeper).
 
 -include("http_cache_store_native.hrl").

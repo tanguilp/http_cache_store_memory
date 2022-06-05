@@ -1,3 +1,4 @@
+%% @private
 -module(http_cache_store_native_cluster_mon).
 
 -behaviour(gen_server).

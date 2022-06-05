@@ -1,3 +1,4 @@
+%% @private
 -module(http_cache_store_native_lru_nuker).
 
 -include("http_cache_store_native.hrl").
@@ -77,4 +78,9 @@ nuke_objects(NbObjects) ->
     end.
 
 schedule_check() ->
-    erlang:send_after(?LIMIT_CHECK_INTERVAL, self(), check).
+    erlang:send_after(limit_check_interval(), self(), check).
+
+limit_check_interval() ->
+        application:get_env(http_cache_store_native,
+                            limit_check_interval,
+                            ?LIMIT_CHECK_INTERVAL).

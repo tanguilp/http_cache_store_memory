@@ -1,3 +1,4 @@
+%% @private
 -module(http_cache_store_native).
 
 -include("http_cache_store_native.hrl").

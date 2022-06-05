@@ -1,8 +1,4 @@
-%%%-------------------------------------------------------------------
-%% @doc http_cache_store_native top level supervisor.
-%% @end
-%%%-------------------------------------------------------------------
-
+%% @private
 -module(http_cache_store_native_sup).
 
 -behaviour(supervisor).
@@ -41,8 +37,8 @@ init([]) ->
            start => {http_cache_store_native_outdated_lru_sweeper, start_link, []}},
          #{id => http_cache_store_native_lru_nuker,
            start => {http_cache_store_native_lru_nuker, start_link, []}},
-         #{id => http_cache_store_native_cluster_sup,
-           start => {http_cache_store_native_cluster_sup, start_link, []},
+         #{id => http_cache_store_native_worker_sup,
+           start => {http_cache_store_native_worker_sup, start_link, []},
            type => supervisor},
          #{id => http_cache_store_native_cluster_mon,
            start => {http_cache_store_native_cluster_mon, start_link, []}}],
