@@ -92,7 +92,7 @@ The object and LRU tables store the following tuples:
 
 Object table: `{ObjectKey, VaryHeaders, UrlDigest, Response, RespMetadata, Expires, SeqNumber}`
 
-LRU table: `{LastUsedTime, ObjectKey, SeqNumber}`
+LRU table: `{{LastUsedTime, ObjectKey, SeqNumber}}`. Note there's only one 3-tuple entry.
 
 Both are `ordered_set` tables, so that:
 - they can be traversed even though they're modified at the same time. This is useful for cleanup
