@@ -5,10 +5,10 @@
 
 -behaviour(http_cache_store).
 
--export([list_candidates/1, get_response/1, put/5, notify_response_used/2,
-         invalidate_url/1, invalidate_by_alternate_key/1, delete_object/2, object_key/2, lru/2]).
+-export([list_candidates/2, get_response/2, put/6, notify_response_used/2,
+         invalidate_url/2, invalidate_by_alternate_key/2, delete_object/2, object_key/2, lru/2]).
 
-list_candidates(RequestKey) ->
+list_candidates(RequestKey, _Opts) ->
     Spec =
         [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '$6', '_'},
           [],
@@ -19,7 +19,7 @@ list_candidates(RequestKey) ->
             <- ets:select(?OBJECT_TABLE, Spec),
         Now < Expires].
 
-get_response(ObjectKey) ->
+get_response(ObjectKey, _Opts) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
         [{_ObjectKey,
           _VaryHeaders,
@@ -33,7 +33,7 @@ get_response(ObjectKey) ->
             undefined
     end.
 
-put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata) ->
+put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, _Opts) ->
     case http_cache_store_native_worker_sup:start_worker({cache_object,
                                                           {RequestKey,
                                                            UrlDigest,
@@ -50,7 +50,7 @@ put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata) ->
             Error
     end.
 
-invalidate_url(UrlDigest) ->
+invalidate_url(UrlDigest, _Opts) ->
     http_cache_store_native_cluster_mon:broadcast_invalidate_url(UrlDigest),
     case http_cache_store_native_worker_sup:start_worker({invalidate_url, UrlDigest}) of
         ok ->
@@ -59,7 +59,7 @@ invalidate_url(UrlDigest) ->
             Error
     end.
 
-invalidate_by_alternate_key(AltKeys) ->
+invalidate_by_alternate_key(AltKeys, _Opts) ->
     http_cache_store_native_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
     case http_cache_store_native_worker_sup:start_worker({invalidate_by_alternate_key,
                                                           AltKeys})
@@ -70,7 +70,7 @@ invalidate_by_alternate_key(AltKeys) ->
             Error
     end.
 
-notify_response_used(ObjectKey, _When) ->
+notify_response_used(ObjectKey, _Opts) ->
     SeqNumber = erlang:unique_integer(),
     case ets:update_element(?OBJECT_TABLE, ObjectKey, {7, SeqNumber}) of
         true ->
