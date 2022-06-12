@@ -17,6 +17,10 @@ It supports:
 It uses Erlang's capabilities and doesn't require external stores (Redis, memcached, DB...).
 Under the hood, it uses ETS tables, system monitor and Erlang's distribution.
 
+## Support
+
+OTP25+
+
 ## Usage
 
 This is an application, and automatically starts.
