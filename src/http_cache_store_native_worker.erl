@@ -6,7 +6,7 @@
 -export([start_link/1]).
 
 start_link({cache_object, Object}) ->
-    Pid = erlang:spawn_link(?MODULE, cache_object, [Object]),
+    Pid = erlang:spawn_link(fun() -> cache_object(Object) end),
     {ok, Pid};
 start_link({invalidate_url, UrlDigest}) ->
     Pid = erlang:spawn_link(fun() -> invalidate_url(UrlDigest) end),
