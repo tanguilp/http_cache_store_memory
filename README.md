@@ -35,6 +35,8 @@ system memory is used, objects are deleted until system memory use no longer exc
 in milliseconds. Defaults to `1000`
 - `warmup_nb_objects`: how many objects are sent to joining nodes when they request warm-up.
 Default to `5000`
+- `warmup_timeout`: how long the warmup process is active, that is it tries to get objects from
+joining nodes, in milliseconds. Default to `20000`
 - `limit_check_interval`: how often to check for limits, and trigger LRU nuking when exceeded, in
 milliseconds. Defaults to `200`
 - `expired_resp_sweep_interval`: how often expired responses are purged, in milliseconds.

@@ -4,11 +4,11 @@
 -behaviour(gen_server).
 
 -define(WARMUP_NB_OBJECTS, 5000).
+-define(WARMUP_TIMEOUT, 20 * 1000).
 
 -export([broadcast_invalidate_url/1, broadcast_invalidate_by_alternate_key/1,
          broadcast_object_available/2, request_cached_object/2, send_cached_object/2]).
--export([start_link/0, init/1, handle_call/3, handle_continue/2, handle_cast/2,
-         handle_info/2]).
+-export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
 broadcast_invalidate_url(UrlDigest) ->
     gen_server:abcast(nodes(), ?MODULE, {invalidate_url, UrlDigest}).
@@ -31,13 +31,11 @@ start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
 
 init(_) ->
-    {ok, [], {continue, []}}.
-
-handle_continue(_, State) ->
-    NbObjects =
-        application:get_env(http_cache_store_native, warmup_nb_objects, ?WARMUP_NB_OBJECTS),
-    gen_server:abcast(nodes(), ?MODULE, {warm_me_up, {node(), NbObjects}}),
-    {noreply, State}.
+    net_kernel:monitor_nodes(true),
+    WarmupTimeout =
+        application:get_env(http_cache_store_native, warmup_timeout, ?WARMUP_TIMEOUT),
+    timer:send_after(?WARMUP_TIMEOUT, stop_warmup),
+    {ok, []}.
 
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
@@ -46,5 +44,13 @@ handle_cast({_, _} = Cmd, State) ->
     http_cache_store_native_worker_sup:start_worker(Cmd),
     {noreply, State}.
 
+handle_info(stop_warmup, State) ->
+    net_kernel:monitor_nodes(false),
+    {noreply, State};
+handle_info({nodeup, Node}, State) ->
+    NbObjects =
+        application:get_env(http_cache_store_native, warmup_nb_objects, ?WARMUP_NB_OBJECTS),
+    gen_server:cast({?MODULE, Node}, {warm_me_up, {node(), NbObjects}}),
+    {noreply, State};
 handle_info(_Request, State) ->
     {noreply, State}.
