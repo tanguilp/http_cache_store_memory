@@ -6,7 +6,7 @@
 -export([start_link/0, start_worker/1, count_children/0]).
 -export([init/1]).
 
--define(MAX_CHILDREN, 100).
+-define(MAX_CONCURRENCY, 32).
 
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
@@ -31,7 +31,7 @@ do_start_worker(Cmd) ->
             supervisor:start_child(?MODULE, [Cmd]),
             ok;
         false ->
-            case count_children() < ?MAX_CHILDREN of
+            case count_children() < max_concurrency() of
                 true ->
                     supervisor:start_child(?MODULE, [Cmd]),
                     ok;
@@ -60,3 +60,6 @@ is_priority_command({warm_me_up, _}) ->
     true;
 is_priority_command(_) ->
     false.
+
+max_concurrency() ->
+    application:get_env(http_cache_store_native, max_concurrency, ?MAX_CONCURRENCY).

@@ -31,6 +31,8 @@ This is an application, and automatically starts.
 number of bytes allocated to store the cached responses. If it is a float, it's the system memory
 threshold that triggers nuking older entries. Defaults to `0.9`, that is, as soon as 90% of the
 system memory is used, objects are deleted until system memory use no longer exceeds this threshold
+- `max_concurrency`: how many workers are to be working at the same time for adding new cache
+entries (including from remote nodes). Defaults to `32`
 - `pull_table_stats_interval`: how often stats are retrieved and associated telemetry event emitted,
 in milliseconds. Defaults to `1000`
 - `warmup_nb_objects`: how many objects are sent to joining nodes when they request warm-up.
