@@ -12,7 +12,7 @@ list_candidates(RequestKey, _Opts) ->
     Spec =
         [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '_'},
           [],
-          [['$1', '$2', '$3', '$4', '$5', '$6']]}],
+          [['$1', '$2', '$3', '$4', '$5']]}],
     Now = unix_now(),
     [{{RequestKey, SecondKeyPart}, Status, RespHeaders, VaryHeaders, RespMetadata}
      || [SecondKeyPart, VaryHeaders, Status, RespHeaders, RespMetadata]
