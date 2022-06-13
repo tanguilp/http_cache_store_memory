@@ -34,7 +34,7 @@ init(_) ->
     net_kernel:monitor_nodes(true),
     WarmupTimeout =
         application:get_env(http_cache_store_native, warmup_timeout, ?WARMUP_TIMEOUT),
-    timer:send_after(?WARMUP_TIMEOUT, stop_warmup),
+    timer:send_after(WarmupTimeout, stop_warmup),
     {ok, []}.
 
 handle_call(_Request, _From, State) ->

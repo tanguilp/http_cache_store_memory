@@ -10,14 +10,14 @@
 
 list_candidates(RequestKey, _Opts) ->
     Spec =
-        [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '$6', '_'},
+        [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '_'},
           [],
           [['$1', '$2', '$3', '$4', '$5', '$6']]}],
     Now = unix_now(),
     [{{RequestKey, SecondKeyPart}, Status, RespHeaders, VaryHeaders, RespMetadata}
-     || [SecondKeyPart, VaryHeaders, Status, RespHeaders, RespMetadata, Expires]
+     || [SecondKeyPart, VaryHeaders, Status, RespHeaders, RespMetadata]
             <- ets:select(?OBJECT_TABLE, Spec),
-        Now < Expires].
+        Now < map_get(grace, RespMetadata)].
 
 get_response(ObjectKey, _Opts) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
@@ -26,14 +26,13 @@ get_response(ObjectKey, _Opts) ->
           _UrlDigest,
           {Status, RespHeaders, RespBody},
           RespMetadata,
-          _Expires,
           _SeqNumber}] ->
             {Status, RespHeaders, RespBody, RespMetadata};
         [] ->
             undefined
     end.
 
-put(RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata, _Opts) ->
+put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata, _Opts) ->
     case http_cache_store_native_worker_sup:start_worker({cache_object,
                                                           {RequestKey,
                                                            UrlDigest,
@@ -72,7 +71,7 @@ invalidate_by_alternate_key(AltKeys, _Opts) ->
 
 notify_response_used(ObjectKey, _Opts) ->
     SeqNumber = erlang:unique_integer(),
-    case ets:update_element(?OBJECT_TABLE, ObjectKey, {7, SeqNumber}) of
+    case ets:update_element(?OBJECT_TABLE, ObjectKey, {6, SeqNumber}) of
         true ->
             lru(ObjectKey, SeqNumber),
             ok;

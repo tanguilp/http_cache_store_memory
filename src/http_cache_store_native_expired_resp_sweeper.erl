@@ -40,7 +40,7 @@ do_sweep('$end_of_table') ->
 do_sweep(ObjectKey) ->
     Now = unix_now(),
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, _, _, _, Expires, _}] when Expires =< Now ->
+        [{_, _, _, _, #{grace := Expires}, _}] when Expires =< Now ->
             http_cache_store_native:delete_object(ObjectKey, expired);
         _ ->
             ok

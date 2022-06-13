@@ -64,7 +64,7 @@ nuke_objects(NbObjects) ->
             table_empty;
         {_, ObjectKey, SeqNumber} = LRUKey ->
             case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-                [{_, _, _, _, _, _, SeqNumber}] ->
+                [{_, _, _, _, _, SeqNumber}] ->
                     ets:delete(?LRU_TABLE, LRUKey),
                     http_cache_store_native:delete_object(ObjectKey, lru_nuked),
                     nuke_objects(NbObjects - 1);
