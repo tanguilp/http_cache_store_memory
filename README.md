@@ -12,7 +12,7 @@ It supports:
   - warmup: already present nodes send their most recently used cached HTTP responses to joining nodes
 - telemetry events (see [Telemetry](#telemetry))
 - Backpressure mechanisms to avoid overloading the whole system with caching operations
-- optional `http_cache_store:invalidate_by_alternate_key/1` callback
+- the optional `http_cache_store:invalidate_by_alternate_key/1` callback
 
 It uses Erlang's capabilities and doesn't require external stores (Redis, memcached, DB...).
 Under the hood, it uses ETS tables, system monitor and Erlang's distribution.
@@ -23,10 +23,12 @@ OTP25+
 
 ## Usage
 
-This is an application, and automatically starts.
+This is an OTP application, and automatically starts.
 
-### Configuration options
+### Configuration parameters
 
+- `cluster_enabled`: exchange of information between nodes of the Erlang cluster is enabled.
+Defaults to `false`
 - `memory_limit`: how much memory is allocated for caching. If this is an integer, then it's the
 number of bytes allocated to store the cached responses. If it is a float, it's the system memory
 threshold that triggers nuking older entries. Defaults to `0.9`, that is, as soon as 90% of the
@@ -46,7 +48,9 @@ Defaults to `3000`
 - `outdated_lru_sweep_interval`: how often outdated LRU entries are purged, in milliseconds.
 Defaults to `2000`
 
-All are environment options.
+All are environment parameters.
+
+All are read at runtime (and can be changed dynamically) except `cluster_enabled`.
 
 ## Installation
 
@@ -117,7 +121,7 @@ we then can use this sequence number to determine if the cached response was use
 
 At startup, some processes are launched:
 
-![Screenshot of the supervision tree](https://github.com/tanguilp/http_cache_store_native/blob/master/supervision_tree.png)
+![Screenshot of the supervision tree](https://raw.githubusercontent.com/tanguilp/http_cache_store_native/master/supervision_tree.png)
 
 `http_cache_store_native_table_holder` holds the ETS tables.
 

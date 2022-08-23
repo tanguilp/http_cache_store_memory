@@ -39,11 +39,19 @@ init([]) ->
            start => {http_cache_store_native_lru_nuker, start_link, []}},
          #{id => http_cache_store_native_worker_sup,
            start => {http_cache_store_native_worker_sup, start_link, []},
-           type => supervisor},
-         #{id => http_cache_store_native_cluster_mon,
-           start => {http_cache_store_native_cluster_mon, start_link, []}}],
+           type => supervisor}]
+        ++ maybe_cluster_mon(),
     {ok, {{one_for_one, 0, 1}, Children}}.
 
 %%====================================================================
 %% Internal functions
 %%====================================================================
+
+maybe_cluster_mon() ->
+    case application:get_env(http_cache_store_native, cluster_enabled, false) of
+        true ->
+            [#{id => http_cache_store_native_cluster_mon,
+               start => {http_cache_store_native_cluster_mon, start_link, []}}];
+        false ->
+            []
+    end.
