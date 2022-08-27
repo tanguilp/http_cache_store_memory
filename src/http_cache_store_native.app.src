@@ -1,11 +1,11 @@
 {application,
  http_cache_store_native,
- [{description, "An OTP application"},
+ [{description, "A store for http_cache that uses native OTP capabilites"},
   {vsn, "0.1.0"},
   {registered, []},
   {mod, {http_cache_store_native_app, []}},
   {applications, [kernel, stdlib, os_mon, telemetry]},
   {env, []},
   {modules, []},
-  {licenses, ["Apache 2.0"]},
-  {links, []}]}.
+  {licenses, ["Apache-2.0"]},
+  {links, [{"github", "https://github.com/tanguilp/http_cache_store_native"}]}]}.
