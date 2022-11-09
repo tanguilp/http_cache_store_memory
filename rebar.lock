@@ -1,16 +1,14 @@
 {"1.2.0",
-[{<<"cowlib">>,
-  {git,"https://github.com/tanguilp/cowlib.git",
-       {ref,"7b6cb301923586145514817f81c49c9f5740b286"}},
-  1},
- {<<"http_cache">>,
-  {git,"https://github.com/tanguilp/http_cache.git",
-       {ref,"ca9d5c6df2b31d95aebfe011d819a37e64a67b82"}},
-  0},
+[{<<"cowlib">>,{pkg,<<"cowlib">>,<<"2.11.0">>},1},
+ {<<"http_cache">>,{pkg,<<"http_cache">>,<<"0.1.0">>},0},
  {<<"telemetry">>,{pkg,<<"telemetry">>,<<"1.1.0">>},0}]}.
 [
 {pkg_hash,[
+ {<<"cowlib">>, <<"0B9FF9C346629256C42EBE1EEB769A83C6CB771A6EE5960BD110AB0B9B872063">>},
+ {<<"http_cache">>, <<"DEE768C230DC617B6D943D8D5AA3AFDE6218B03DD319296C3C9CDA7A46438D46">>},
  {<<"telemetry">>, <<"A589817034A27EAB11144AD24D5C0F9FAB1F58173274B1E9BAE7074AF9CBEE51">>}]},
 {pkg_hash_ext,[
+ {<<"cowlib">>, <<"2B3E9DA0B21C4565751A6D4901C20D1B4CC25CBB7FD50D91D2AB6DD287BC86A9">>},
+ {<<"http_cache">>, <<"C4E568D6B88E269A43A3587258EF220B04977A2BC0C72E2512F73787FFED918F">>},
  {<<"telemetry">>, <<"B727B2A1F75614774CFF2D7565B64D0DFA5BD52BA517F16543E6FC7EFCC0DF48">>}]}
 ].
