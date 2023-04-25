@@ -57,13 +57,13 @@ All are read at runtime (and can be changed dynamically) except `cluster_enabled
 Erlang (rebar3):
 
 ```erlang
-{deps, [{http_cache_store_native, "~> 0.1"}]}.
+{deps, [{http_cache_store_native, "~> 0.2.0"}]}.
 ```
 
 Elixir:
 
 ```elixir
-{:http_cache_store_native, "~> 0.1"}
+{:http_cache_store_native, "~> 0.2.0"}
 ```
 
 ## Telemetry
