@@ -1,5 +1,5 @@
 %% @private
--module(http_cache_store_native_worker_sup).
+-module(http_cache_store_memory_worker_sup).
 
 -behaviour(supervisor).
 
@@ -16,7 +16,7 @@ start_worker({Type, _} = Cmd)
          Type == remote_object_available;
          Type == remote_object_request;
          Type == remote_object_response ->
-    case http_cache_store_native_stats:is_limit_reached() of
+    case http_cache_store_memory_stats:is_limit_reached() of
         false ->
             do_start_worker(Cmd);
         true ->
@@ -45,11 +45,11 @@ count_children() ->
 
 init(_) ->
     ChildSpec =
-        #{id => http_cache_store_native_worker,
-          start => {http_cache_store_native_worker, start_link, []},
+        #{id => http_cache_store_memory_worker,
+          start => {http_cache_store_memory_worker, start_link, []},
           restart => temporary,
           shutdown => brutal_kill,
-          modules => [http_cache_store_native_worker]},
+          modules => [http_cache_store_memory_worker]},
     {ok, {{simple_one_for_one, 0, 1}, [ChildSpec]}}.
 
 is_priority_command({invalidate_url, _}) ->
@@ -62,4 +62,4 @@ is_priority_command(_) ->
     false.
 
 max_concurrency() ->
-    application:get_env(http_cache_store_native, max_concurrency, ?MAX_CONCURRENCY).
+    application:get_env(http_cache_store_memory, max_concurrency, ?MAX_CONCURRENCY).

@@ -1,7 +1,7 @@
 %% @private
--module(http_cache_store_native).
+-module(http_cache_store_memory).
 
--include("http_cache_store_native.hrl").
+-include("http_cache_store_memory.hrl").
 
 -behaviour(http_cache_store).
 
@@ -33,7 +33,7 @@ get_response(ObjectKey, _Opts) ->
     end.
 
 put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata, _Opts) ->
-    case http_cache_store_native_worker_sup:start_worker({cache_object,
+    case http_cache_store_memory_worker_sup:start_worker({cache_object,
                                                           {RequestKey,
                                                            UrlDigest,
                                                            VaryHeaders,
@@ -43,15 +43,15 @@ put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata, 
         ok ->
             ObjectKey = object_key(RequestKey, VaryHeaders),
             Expires = map_get(grace, RespMetadata),
-            http_cache_store_native_cluster_mon:broadcast_object_available(ObjectKey, Expires),
+            http_cache_store_memory_cluster_mon:broadcast_object_available(ObjectKey, Expires),
             ok;
         {error, _} = Error ->
             Error
     end.
 
 invalidate_url(UrlDigest, _Opts) ->
-    http_cache_store_native_cluster_mon:broadcast_invalidate_url(UrlDigest),
-    case http_cache_store_native_worker_sup:start_worker({invalidate_url, UrlDigest}) of
+    http_cache_store_memory_cluster_mon:broadcast_invalidate_url(UrlDigest),
+    case http_cache_store_memory_worker_sup:start_worker({invalidate_url, UrlDigest}) of
         ok ->
             {ok, undefined};
         {error, _} = Error ->
@@ -59,8 +59,8 @@ invalidate_url(UrlDigest, _Opts) ->
     end.
 
 invalidate_by_alternate_key(AltKeys, _Opts) ->
-    http_cache_store_native_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
-    case http_cache_store_native_worker_sup:start_worker({invalidate_by_alternate_key,
+    http_cache_store_memory_cluster_mon:broadcast_invalidate_by_alternate_key(AltKeys),
+    case http_cache_store_memory_worker_sup:start_worker({invalidate_by_alternate_key,
                                                           AltKeys})
     of
         ok ->
@@ -80,7 +80,7 @@ notify_response_used(ObjectKey, _Opts) ->
     end.
 
 delete_object(ObjectKey, Reason) ->
-    telemetry:execute([http_cache_store_native, object_deleted], #{}, #{reason => Reason}),
+    telemetry:execute([http_cache_store_memory, object_deleted], #{}, #{reason => Reason}),
     ets:delete(?OBJECT_TABLE, ObjectKey),
     ok.
 

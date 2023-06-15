@@ -1,7 +1,7 @@
 %% @private
--module(http_cache_store_native_table_holder).
+-module(http_cache_store_memory_table_holder).
 
--include("http_cache_store_native.hrl").
+-include("http_cache_store_memory.hrl").
 
 -behaviour(gen_server).
 
@@ -14,7 +14,7 @@ init(_) ->
     ets:new(?CONFIG_TABLE, [named_table, public]),
     ets:new(?OBJECT_TABLE, [ordered_set, named_table, public, {write_concurrency, auto}]),
     ets:new(?LRU_TABLE, [ordered_set, named_table, public]),
-    http_cache_store_native_stats:set_limit_reached(false),
+    http_cache_store_memory_stats:set_limit_reached(false),
     {ok, []}.
 
 handle_call(_Request, _From, State) ->

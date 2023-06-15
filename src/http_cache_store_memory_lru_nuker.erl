@@ -1,7 +1,7 @@
 %% @private
--module(http_cache_store_native_lru_nuker).
+-module(http_cache_store_memory_lru_nuker).
 
--include("http_cache_store_native.hrl").
+-include("http_cache_store_memory.hrl").
 
 -behaviour(gen_server).
 
@@ -25,7 +25,7 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 handle_info(check, State) ->
-    telemetry:span([http_cache_store_native, lru_nuker],
+    telemetry:span([http_cache_store_memory, lru_nuker],
                    #{},
                    fun() ->
                       nuke(?START_NUKE_NB_OBJECTS),
@@ -35,9 +35,9 @@ handle_info(check, State) ->
     {noreply, State}.
 
 nuke(NbObjects) ->
-    AllocatedMemoryUsed = http_cache_store_native_stats:allocated_memory_used(),
+    AllocatedMemoryUsed = http_cache_store_memory_stats:allocated_memory_used(),
     if AllocatedMemoryUsed < 0.99 ->
-           http_cache_store_native_stats:set_limit_reached(false),
+           http_cache_store_memory_stats:set_limit_reached(false),
            ok;
        AllocatedMemoryUsed < 1 ->
            case nuke_objects(NbObjects) of
@@ -47,7 +47,7 @@ nuke(NbObjects) ->
                    nuke(NbObjects * 2)
            end;
        true ->
-           http_cache_store_native_stats:set_limit_reached(true),
+           http_cache_store_memory_stats:set_limit_reached(true),
            case nuke_objects(NbObjects) of
                table_empty ->
                    ok;
@@ -66,7 +66,7 @@ nuke_objects(NbObjects) ->
             case ets:lookup(?OBJECT_TABLE, ObjectKey) of
                 [{_, _, _, _, _, SeqNumber}] ->
                     ets:delete(?LRU_TABLE, LRUKey),
-                    http_cache_store_native:delete_object(ObjectKey, lru_nuked),
+                    http_cache_store_memory:delete_object(ObjectKey, lru_nuked),
                     nuke_objects(NbObjects - 1);
                 % either the object exists, but with another sequence number which means the
                 % current LRU key is outdated (a more recent one exists), or the object doesn't
@@ -81,4 +81,4 @@ schedule_check() ->
     erlang:send_after(limit_check_interval(), self(), check).
 
 limit_check_interval() ->
-    application:get_env(http_cache_store_native, limit_check_interval, ?LIMIT_CHECK_INTERVAL).
+    application:get_env(http_cache_store_memory, limit_check_interval, ?LIMIT_CHECK_INTERVAL).

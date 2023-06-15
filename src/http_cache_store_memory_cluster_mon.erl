@@ -1,5 +1,5 @@
 %% @private
--module(http_cache_store_native_cluster_mon).
+-module(http_cache_store_memory_cluster_mon).
 
 -behaviour(gen_server).
 
@@ -33,7 +33,7 @@ start_link() ->
 init(_) ->
     net_kernel:monitor_nodes(true),
     WarmupTimeout =
-        application:get_env(http_cache_store_native, warmup_timeout, ?WARMUP_TIMEOUT),
+        application:get_env(http_cache_store_memory, warmup_timeout, ?WARMUP_TIMEOUT),
     timer:send_after(WarmupTimeout, stop_warmup),
     {ok, []}.
 
@@ -41,7 +41,7 @@ handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 handle_cast({_, _} = Cmd, State) ->
-    http_cache_store_native_worker_sup:start_worker(Cmd),
+    http_cache_store_memory_worker_sup:start_worker(Cmd),
     {noreply, State}.
 
 handle_info(stop_warmup, State) ->
@@ -49,7 +49,7 @@ handle_info(stop_warmup, State) ->
     {noreply, State};
 handle_info({nodeup, Node}, State) ->
     NbObjects =
-        application:get_env(http_cache_store_native, warmup_nb_objects, ?WARMUP_NB_OBJECTS),
+        application:get_env(http_cache_store_memory, warmup_nb_objects, ?WARMUP_NB_OBJECTS),
     gen_server:cast({?MODULE, Node}, {warm_me_up, {node(), NbObjects}}),
     {noreply, State};
 handle_info(_Request, State) ->

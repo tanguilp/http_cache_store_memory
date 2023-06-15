@@ -1,6 +1,6 @@
 %% @private
 
--module(http_cache_store_native_app).
+-module(http_cache_store_memory_app).
 
 -behaviour(application).
 
@@ -12,7 +12,7 @@
 %%====================================================================
 
 start(_StartType, _StartArgs) ->
-    http_cache_store_native_sup:start_link().
+    http_cache_store_memory_sup:start_link().
 
 %%--------------------------------------------------------------------
 stop(_State) ->

@@ -1,13 +1,13 @@
 %% @private
--module(http_cache_store_native_expired_resp_sweeper).
+-module(http_cache_store_memory_outdated_lru_sweeper).
 
--include("http_cache_store_native.hrl").
+-include("http_cache_store_memory.hrl").
 
 -behaviour(gen_server).
 
 -export([start_link/0, init/1, handle_call/3, handle_cast/2, handle_info/2]).
 
--define(DEFAULT_INTERVAL, 3 * 1000).
+-define(DEFAULT_INTERVAL, 2 * 1000).
 
 start_link() ->
     gen_server:start_link({local, ?MODULE}, ?MODULE, [], []).
@@ -23,7 +23,7 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 handle_info(sweep, State) ->
-    telemetry:span([http_cache_store_native, expired_resp_sweeper],
+    telemetry:span([http_cache_store_memory, expired_lru_entry_sweeper],
                    #{},
                    fun() ->
                       sweep(),
@@ -33,27 +33,23 @@ handle_info(sweep, State) ->
     {noreply, State}.
 
 sweep() ->
-    do_sweep(ets:first(?OBJECT_TABLE)).
+    do_sweep(ets:first(?LRU_TABLE)).
 
 do_sweep('$end_of_table') ->
     ok;
-do_sweep(ObjectKey) ->
-    Now = unix_now(),
+do_sweep({_, ObjectKey, SeqNumber} = LRUKey) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, _, _, #{grace := Expires}, _}] when Expires =< Now ->
-            http_cache_store_native:delete_object(ObjectKey, expired);
+        [{_, _, _, _, _, SeqNumber}] ->
+            ok;
         _ ->
-            ok
+            ets:delete(?LRU_TABLE, LRUKey)
     end,
-    do_sweep(ets:next(?OBJECT_TABLE, ObjectKey)).
+    do_sweep(ets:next(?LRU_TABLE, LRUKey)).
 
 schedule_sweep() ->
     erlang:send_after(sweep_interval(), self(), sweep).
 
 sweep_interval() ->
-    application:get_env(http_cache_store_native,
-                        expired_resp_sweep_interval,
+    application:get_env(http_cache_store_memory,
+                        outdated_lru_sweep_interval,
                         ?DEFAULT_INTERVAL).
-
-unix_now() ->
-    os:system_time(second).
