@@ -1,7 +1,7 @@
 {application,
  http_cache_store_memory,
  [{description, "A store for http_cache that uses ETS for in-memory caching"},
-  {vsn, "0.1.0"},
+  {vsn, "0.2.0"},
   {registered, []},
   {mod, {http_cache_store_memory_app, []}},
   {applications, [kernel, stdlib, os_mon, telemetry]},
