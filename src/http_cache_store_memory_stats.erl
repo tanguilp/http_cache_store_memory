@@ -23,6 +23,10 @@ allocated_memory_used() ->
     MemoryLimit = application:get_env(http_cache_store_memory, memory_limit, ?DEFAULT_LIMIT),
     allocated_memory_used(MemoryLimit).
 
+allocated_memory_used(0.0) ->
+    1.0;
+allocated_memory_used(0) ->
+    1.0;
 allocated_memory_used(Ratio) when is_float(Ratio) ->
     system_memory_use() / Ratio;
 allocated_memory_used(MaxSize) when is_integer(MaxSize) ->
