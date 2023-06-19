@@ -17,6 +17,8 @@ It supports:
 It uses Erlang's capabilities and doesn't require external stores (Redis, memcached, DB...).
 Under the hood, it uses ETS tables, system monitor and Erlang's distribution.
 
+For on-disk caching, see: [`http_cache_store_disk`](https://github.com/tanguilp/http_cache_store_disk).
+
 ## Support
 
 OTP25+
