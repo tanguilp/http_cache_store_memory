@@ -13,7 +13,12 @@ start_link() ->
 init(_) ->
     ets:new(?CONFIG_TABLE, [named_table, public]),
     ets:new(?OBJECT_TABLE,
-            [ordered_set, named_table, public, compressed, {write_concurrency, auto}]),
+            [ordered_set,
+             named_table,
+             public,
+             compressed,
+             {read_concurrency, true},
+             {write_concurrency, auto}]),
     ets:new(?LRU_TABLE, [ordered_set, named_table, public]),
     http_cache_store_memory_stats:set_limit_reached(false),
     {ok, []}.
