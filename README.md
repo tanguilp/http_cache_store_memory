@@ -19,6 +19,16 @@ Under the hood, it uses ETS tables, system monitor and Erlang's distribution.
 
 For on-disk caching, see: [`http_cache_store_disk`](https://github.com/tanguilp/http_cache_store_disk).
 
+## `http_cache*` pro versions
+
+Advanced HTTP caching features are available as licensed packages:
+- [`http_cache_pro`](https://hex.codecodeship.com/package/http_cache_pro): brings HTTP request
+collapsing, brotli compression support and more
+- [`http_cache_store_disk_pro`](https://hex.codecodeship.com/package/http_cache_store_disk_pro):
+offers SSD protection and persistence support to your disk backend
+
+Refer to these links for technical insights and license information.
+
 ## Support
 
 OTP25+
