@@ -4,7 +4,7 @@
 
 -export([all/0, init_per_testcase/2, end_per_testcase/2]).
 -export([cache_file/1, lru_deletion_memory_limit/1, invalidate_by_url/1,
-         invalidate_by_alternate_key/1]).
+         invalidate_by_alternate_key/1, cache_chunks/1]).
 
 -define(LIMIT_CHECK_INTERVAL, 100).
 -define(TEST_REQUEST_KEY, <<"some request key">>).
@@ -19,7 +19,11 @@
 -define(TEST_OPTS, []).
 
 all() ->
-    [cache_file, lru_deletion_memory_limit, invalidate_by_url, invalidate_by_alternate_key].
+    [cache_file,
+     lru_deletion_memory_limit,
+     invalidate_by_url,
+     invalidate_by_alternate_key,
+     cache_chunks].
 
 init_per_testcase(_TestName, Config) ->
     application:set_env(http_cache_store_memory, limit_check_interval, ?LIMIT_CHECK_INTERVAL),
@@ -104,3 +108,25 @@ invalidate_by_alternate_key(_Config) ->
     after 1000 ->
         ct:fail(timeout_receive_telemetry_event)
     end.
+
+cache_chunks(_Config) ->
+    ChunkMetadata1 =
+        #{grace => erlang:system_time(second) + 120,
+          parsed_headers => #{<<"content-range">> => {bytes, 0, 5, 11}}},
+    ChunkMetadata2 =
+        #{grace => erlang:system_time(second) + 120,
+          parsed_headers => #{<<"content-range">> => {bytes, 6, 10, 11}}},
+    http_cache_store_memory:put(?TEST_REQUEST_KEY,
+                                ?TEST_URL_DIGEST,
+                                ?TEST_VARY_HEADERS,
+                                {206, [], <<"Hello">>},
+                                ChunkMetadata1,
+                                ?TEST_OPTS),
+    http_cache_store_memory:put(?TEST_REQUEST_KEY,
+                                ?TEST_URL_DIGEST,
+                                ?TEST_VARY_HEADERS,
+                                {206, [], <<"World">>},
+                                ChunkMetadata2,
+                                ?TEST_OPTS),
+    timer:sleep(100),
+    [_, _] = http_cache_store_memory:list_candidates(?TEST_REQUEST_KEY, ?TEST_OPTS).
