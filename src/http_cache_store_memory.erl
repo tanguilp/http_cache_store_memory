@@ -6,16 +6,20 @@
 -include("http_cache_store_memory.hrl").
 
 -export([list_candidates/2, get_response/2, put/6, notify_response_used/2,
-         invalidate_url/2, invalidate_by_alternate_key/2, delete_object/2, object_key/2, lru/2]).
+         invalidate_url/2, invalidate_by_alternate_key/2, delete_object/2, object_key/3, lru/2]).
 
 list_candidates(RequestKey, _Opts) ->
     Spec =
-        [{{{RequestKey, '$1'}, '$2', '_', {'$3', '$4', '_'}, '$5', '_'},
+        [{{{RequestKey, '$1', '$2'}, '$3', '_', {'$4', '$5', '_'}, '$6', '_'},
           [],
-          [['$1', '$2', '$3', '$4', '$5']]}],
+          [['$1', '$2', '$3', '$4', '$5', '$6']]}],
     Now = unix_now(),
-    [{{RequestKey, SecondKeyPart}, Status, RespHeaders, VaryHeaders, RespMetadata}
-     || [SecondKeyPart, VaryHeaders, Status, RespHeaders, RespMetadata]
+    [{{RequestKey, SecondKeyPart, ThirdKeyPart},
+      Status,
+      RespHeaders,
+      VaryHeaders,
+      RespMetadata}
+     || [SecondKeyPart, ThirdKeyPart, VaryHeaders, Status, RespHeaders, RespMetadata]
             <- ets:select(?OBJECT_TABLE, Spec),
         Now < map_get(grace, RespMetadata)].
 
@@ -41,7 +45,7 @@ put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata, 
                                                            RespMetadata}})
     of
         ok ->
-            ObjectKey = object_key(RequestKey, VaryHeaders),
+            ObjectKey = object_key(RequestKey, VaryHeaders, RespMetadata),
             Expires = map_get(grace, RespMetadata),
             http_cache_store_memory_cluster_mon:broadcast_object_available(ObjectKey, Expires),
             ok;
@@ -84,8 +88,30 @@ delete_object(ObjectKey, Reason) ->
     ets:delete(?OBJECT_TABLE, ObjectKey),
     ok.
 
-object_key(RequestKey, VaryHeaders) ->
-    {RequestKey, crypto:hash(sha256, erlang:term_to_binary(VaryHeaders))}.
+object_key(RequestKey, VaryHeaders, RespMetadata) ->
+    {RequestKey,
+     crypto:hash(sha256, erlang:term_to_binary(VaryHeaders)),
+     chunk_id(RespMetadata)}.
+
+chunk_id(#{parsed_headers := #{<<"content-range">> := {Unit, Start, End, Len}}}) ->
+    UnitBin =
+        if is_atom(Unit) ->
+               atom_to_binary(Unit);
+           true ->
+               Unit
+        end,
+    StartBin = integer_to_binary(Start),
+    EndBin = integer_to_binary(End),
+    LenBin =
+        case Len of
+            '*' ->
+                <<"*">>;
+            _ ->
+                integer_to_binary(Len)
+        end,
+    <<UnitBin/binary, " ", StartBin/binary, "-", EndBin/binary, "/", LenBin/binary>>;
+chunk_id(_RespMetadata) ->
+    <<>>.
 
 lru(ObjectKey, SeqNumber) ->
     ets:insert(?LRU_TABLE, {{unix_now(), ObjectKey, SeqNumber}}).

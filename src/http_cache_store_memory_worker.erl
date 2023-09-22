@@ -29,7 +29,7 @@ start_link({remote_object_response, Object}) ->
     {ok, Pid}.
 
 cache_object({RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata}) ->
-    ObjectKey = http_cache_store_memory:object_key(RequestKey, VaryHeaders),
+    ObjectKey = http_cache_store_memory:object_key(RequestKey, VaryHeaders, RespMetadata),
     SeqNumber = erlang:unique_integer(),
     ets:insert(?OBJECT_TABLE,
                {ObjectKey, VaryHeaders, UrlDigest, Response, RespMetadata, SeqNumber}),
@@ -77,7 +77,7 @@ warmup_node(_Node, _Key, 0) ->
     ok;
 warmup_node(Node, {_, ObjectKey, SeqNumber} = LRUKey, NbObjects) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{{RequestKey, _}, VaryHeaders, UrlDigest, Response, RespMetadata, SeqNumber}] ->
+        [{{RequestKey, _, _}, VaryHeaders, UrlDigest, Response, RespMetadata, SeqNumber}] ->
             CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata},
             http_cache_store_memory_cluster_mon:send_cached_object(Node, CachedObject),
             warmup_node(Node, ets:prev(?LRU_TABLE, LRUKey), NbObjects - 1);
@@ -87,7 +87,7 @@ warmup_node(Node, {_, ObjectKey, SeqNumber} = LRUKey, NbObjects) ->
 
 send_requested_object(Node, ObjectKey) ->
     case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{{RequestKey, _}, VaryHeaders, UrlDigest, Response, RespMetadata, _}] ->
+        [{{RequestKey, _, _}, VaryHeaders, UrlDigest, Response, RespMetadata, _}] ->
             CachedObject = {RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata},
             http_cache_store_memory_cluster_mon:send_cached_object(Node, CachedObject);
         _ ->
