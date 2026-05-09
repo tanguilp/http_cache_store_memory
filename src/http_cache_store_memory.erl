@@ -36,7 +36,9 @@ get_response(ObjectKey, _Opts) ->
             undefined
     end.
 
-put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata, _Opts) ->
+put(RequestKey, UrlDigest, VaryHeaders, Response, #{grace := _} = RespMetadata0, _Opts) ->
+    AlternateKeys = maps:get(alternate_keys, RespMetadata0, []),
+    RespMetadata = maps:put(alternate_keys, maps:from_keys(AlternateKeys, []), RespMetadata0),
     case http_cache_store_memory_worker_sup:start_worker({cache_object,
                                                           {RequestKey,
                                                            UrlDigest,
