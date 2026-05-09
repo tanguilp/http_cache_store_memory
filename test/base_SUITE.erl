@@ -75,8 +75,6 @@ invalidate_by_url(_Config) ->
                                 ?TEST_RESP_METADATA,
                                 ?TEST_OPTS),
     http_cache_store_memory:invalidate_url(?TEST_URL_DIGEST, ?TEST_OPTS),
-    timer:sleep(1000),
-    [] = http_cache_store_memory:list_candidates(?TEST_REQUEST_KEY, ?TEST_OPTS),
     receive
         {[http_cache_store_memory, object_deleted],
          TelemetryRef,
@@ -85,7 +83,8 @@ invalidate_by_url(_Config) ->
             telemetry:detach(TelemetryRef)
     after 1000 ->
         ct:fail(timeout_receive_telemetry_event)
-    end.
+    end,
+    [] = http_cache_store_memory:list_candidates(?TEST_REQUEST_KEY, ?TEST_OPTS).
 
 invalidate_by_alternate_key(_Config) ->
     TelemetryRef =
@@ -97,8 +96,6 @@ invalidate_by_alternate_key(_Config) ->
                                 ?TEST_RESP_METADATA,
                                 ?TEST_OPTS),
     http_cache_store_memory:invalidate_by_alternate_key([alternate], ?TEST_OPTS),
-    timer:sleep(1000),
-    [] = http_cache_store_memory:list_candidates(?TEST_REQUEST_KEY, ?TEST_OPTS),
     receive
         {[http_cache_store_memory, object_deleted],
          TelemetryRef,
@@ -107,7 +104,8 @@ invalidate_by_alternate_key(_Config) ->
             telemetry:detach(TelemetryRef)
     after 1000 ->
         ct:fail(timeout_receive_telemetry_event)
-    end.
+    end,
+    [] = http_cache_store_memory:list_candidates(?TEST_REQUEST_KEY, ?TEST_OPTS).
 
 cache_chunks(_Config) ->
     ChunkMetadata1 =
