@@ -36,18 +36,12 @@ cache_object({RequestKey, UrlDigest, VaryHeaders, Response, RespMetadata}) ->
     http_cache_store_memory:lru(ObjectKey, SeqNumber).
 
 invalidate_url(UrlDigest) ->
-    invalidate_url(UrlDigest, ets:first(?OBJECT_TABLE)).
-
-invalidate_url(_UrlDigest, '$end_of_table') ->
-    ok;
-invalidate_url(UrlDigest, ObjectKey) ->
-    case ets:lookup(?OBJECT_TABLE, ObjectKey) of
-        [{_, _, UrlDigest, _, _, _}] ->
-            http_cache_store_memory:delete_object(ObjectKey, url_invalidation),
-            invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey));
-        _ ->
-            invalidate_url(UrlDigest, ets:next(?OBJECT_TABLE, ObjectKey))
-    end.
+    MatchSpec = [{{'_', '_', '$1', '_', '_', '_'}, [{'==', UrlDigest, '$1'}], [true]}],
+    NbDeleted = ets:select_delete(?OBJECT_TABLE, MatchSpec),
+    [telemetry:execute([http_cache_store_memory, object_deleted],
+                       #{},
+                       #{reason => url_invalidation})
+     || _ <- lists:seq(0, NbDeleted - 1)].
 
 invalidate_by_alternate_key(AltKeys) ->
     MatchSpec =
