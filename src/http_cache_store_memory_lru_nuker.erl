@@ -25,35 +25,38 @@ handle_cast(_Request, State) ->
     {noreply, State}.
 
 handle_info(check, State) ->
-    telemetry:span([http_cache_store_memory, lru_nuker],
-                   #{},
-                   fun() ->
-                      nuke(?START_NUKE_NB_OBJECTS),
-                      {ok, #{}}
-                   end),
+    telemetry:span(
+        [http_cache_store_memory, lru_nuker],
+        #{},
+        fun() ->
+            nuke(?START_NUKE_NB_OBJECTS),
+            {ok, #{}}
+        end
+    ),
     schedule_check(),
     {noreply, State}.
 
 nuke(NbObjects) ->
     AllocatedMemoryUsed = http_cache_store_memory_stats:allocated_memory_used(),
-    if AllocatedMemoryUsed < 0.99 ->
-           http_cache_store_memory_stats:set_limit_reached(false),
-           ok;
-       AllocatedMemoryUsed < 1 ->
-           case nuke_objects(NbObjects) of
-               table_empty ->
-                   ok;
-               ok ->
-                   nuke(NbObjects * 2)
-           end;
-       true ->
-           http_cache_store_memory_stats:set_limit_reached(true),
-           case nuke_objects(NbObjects) of
-               table_empty ->
-                   ok;
-               ok ->
-                   nuke(NbObjects * 2)
-           end
+    if
+        AllocatedMemoryUsed < 0.99 ->
+            http_cache_store_memory_stats:set_limit_reached(false),
+            ok;
+        AllocatedMemoryUsed < 1 ->
+            case nuke_objects(NbObjects) of
+                table_empty ->
+                    ok;
+                ok ->
+                    nuke(NbObjects * 2)
+            end;
+        true ->
+            http_cache_store_memory_stats:set_limit_reached(true),
+            case nuke_objects(NbObjects) of
+                table_empty ->
+                    ok;
+                ok ->
+                    nuke(NbObjects * 2)
+            end
     end.
 
 nuke_objects(0) ->

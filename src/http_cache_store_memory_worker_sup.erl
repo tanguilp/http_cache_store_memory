@@ -11,11 +11,12 @@
 start_link() ->
     supervisor:start_link({local, ?MODULE}, ?MODULE, []).
 
-start_worker({Type, _} = Cmd)
-    when Type == cache_object;
-         Type == remote_object_available;
-         Type == remote_object_request;
-         Type == remote_object_response ->
+start_worker({Type, _} = Cmd) when
+    Type == cache_object;
+    Type == remote_object_available;
+    Type == remote_object_request;
+    Type == remote_object_response
+->
     case http_cache_store_memory_stats:is_limit_reached() of
         false ->
             do_start_worker(Cmd);
@@ -45,11 +46,13 @@ count_children() ->
 
 init(_) ->
     ChildSpec =
-        #{id => http_cache_store_memory_worker,
-          start => {http_cache_store_memory_worker, start_link, []},
-          restart => temporary,
-          shutdown => brutal_kill,
-          modules => [http_cache_store_memory_worker]},
+        #{
+            id => http_cache_store_memory_worker,
+            start => {http_cache_store_memory_worker, start_link, []},
+            restart => temporary,
+            shutdown => brutal_kill,
+            modules => [http_cache_store_memory_worker]
+        },
     {ok, {{simple_one_for_one, 0, 1}, [ChildSpec]}}.
 
 is_priority_command({invalidate_url, _}) ->
